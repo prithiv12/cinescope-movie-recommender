@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ==================================================
-# ADVANCED UI CSS (UNCHANGED)
+# ADVANCED UI CSS (UNCHANGED + INFO CARD ADDED)
 # ==================================================
 st.markdown("""
 <style>
@@ -33,7 +33,6 @@ h1, h3 {
 h2 {
     font-family: 'Segoe UI', sans-serif;
     color: #111213;
-
 }
 .card {
     background: rgba(180, 7, 16, 0.8);
@@ -68,6 +67,19 @@ div.stButton > button {
     padding: 0.45rem 1.5rem;
     border: none;
     font-weight: 700;
+}
+.info-card {
+    background: rgba(15, 23, 42, 0.85);
+    border-left: 5px solid #f59e0b;
+    padding: 18px 22px;
+    border-radius: 14px;
+    margin: 15px 0;
+    color: #e5e7eb;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+.info-card strong {
+    color: #fbbf24;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -108,7 +120,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ==================================================
-# 🔍 MOVIE SEARCH (NO AUTOCOMPLETE)
+# 🔍 MOVIE SEARCH
 # ==================================================
 st.header("🔍 Search Movies")
 
@@ -140,54 +152,6 @@ if query and "search_results" in st.session_state:
                     <p>👥 {int(row['votes'])} votes</p>
                 </div>
                 """, unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-        if col1.button("⬅ Previous", disabled=st.session_state.search_page == 0):
-            st.session_state.search_page -= 1
-            st.rerun()
-        if col2.button("Next ➡", disabled=end >= len(results)):
-            st.session_state.search_page += 1
-            st.rerun()
-
-# ==================================================
-# 🎭 GENRE SEARCH
-# ==================================================
-st.header("🎭 Browse by Genre")
-
-genre = st.text_input("Genre (Action, Drama, Sci-Fi)")
-
-if st.button("Search Genre"):
-    st.session_state.genre_page = 0
-    st.session_state.genre_results = search_by_genre(genre)
-
-if genre and "genre_results" in st.session_state:
-    results = st.session_state.genre_results
-
-    if results.empty:
-        st.markdown("<div class='empty-box'>❌ No movies found</div>", unsafe_allow_html=True)
-    else:
-        start = st.session_state.genre_page * RESULTS_PER_PAGE
-        end = start + RESULTS_PER_PAGE
-
-        for _, row in results.iloc[start:end].iterrows():
-            c1, c2 = st.columns([1, 4])
-            with c1:
-                st.image(get_poster_url(row["title"]), width=140)
-            with c2:
-                st.markdown(f"""
-                <div class="card">
-                    <h3>{row['title']}</h3>
-                    <span class="badge">⭐ {row['rating']}</span>
-                </div>
-                """, unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-        if col1.button("⬅ Previous Genre", disabled=st.session_state.genre_page == 0):
-            st.session_state.genre_page -= 1
-            st.rerun()
-        if col2.button("Next Genre ➡", disabled=end >= len(results)):
-            st.session_state.genre_page += 1
-            st.rerun()
 
 # ==================================================
 # 🎥 SIMILAR MOVIES
@@ -221,18 +185,19 @@ if base_movie and "similar_results" in st.session_state:
                 </div>
                 """, unsafe_allow_html=True)
 
-        col1, col2 = st.columns(2)
-        if col1.button("⬅ Previous Similar", disabled=st.session_state.similar_page == 0):
-            st.session_state.similar_page -= 1
-            st.rerun()
-        if col2.button("Next Similar ➡", disabled=end >= len(results)):
-            st.session_state.similar_page += 1
-            st.rerun()
-
 # ==================================================
-# 📊 HEATMAP + METRICS
+# 📊 EXPLAINABILITY & EVALUATION
 # ==================================================
 st.header("📊 Explainability & Evaluation")
+
+st.markdown("""
+<div class="info-card">
+<strong>Similarity Heatmap:</strong><br>
+The heatmap visualizes how similar recommended movies are to each other using cosine
+similarity on genre and description features. Darker cells indicate stronger similarity,
+helping explain why certain movies appear together in recommendations.
+</div>
+""", unsafe_allow_html=True)
 
 if st.button("Show Similarity Heatmap"):
     idx = get_movie_index(base_movie)
@@ -246,6 +211,15 @@ if st.button("Show Similarity Heatmap"):
         plt.xticks(rotation=90)
         st.pyplot(fig)
 
+st.markdown("""
+<div class="info-card">
+<strong>K Value:</strong> Number of top recommendations considered during evaluation.
+Lower values focus on the best matches, while higher values evaluate broader coverage.<br><br>
+<strong>Rating Threshold:</strong> Minimum IMDb rating used to determine whether a movie
+is considered relevant during evaluation.
+</div>
+""", unsafe_allow_html=True)
+
 k = st.slider("K value", 5, 20, 10)
 threshold = st.slider("Rating threshold", 6.0, 9.0, 7.0)
 
@@ -253,3 +227,20 @@ if st.button("Evaluate Model"):
     p, r = precision_recall_at_k(k, threshold)
     st.metric("Precision@K", f"{p:.3f}")
     st.metric("Recall@K", f"{r:.3f}")
+
+    st.markdown("""
+    <div class="info-card">
+    <strong>Precision@K:</strong> Indicates how many of the top K recommended movies are relevant.
+    Higher precision means more accurate recommendations.<br><br>
+
+    <strong>Recall@K:</strong> Indicates how many relevant movies in the dataset appear in the
+    top K results. Recall is typically lower in recommender systems due to selective
+    recommendations.<br><br>
+
+    <strong>Effect of Sliders:</strong><br>
+    Increasing <strong>K</strong> generally increases recall but may reduce precision.
+    Increasing the <strong>rating threshold</strong> makes evaluation stricter, often
+    reducing recall while slightly improving precision. These sliders affect only the
+    evaluation metrics and do not change recommendation results.
+    </div>
+    """, unsafe_allow_html=True)
