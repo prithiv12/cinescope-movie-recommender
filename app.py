@@ -48,7 +48,7 @@ h2 {
 .badge {
     display: inline-block;
     padding: 6px 12px;
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    background: linear-gradient(135deg, #fbbf24, #000000);
     color: white;
     border-radius: 999px;
     font-weight: 700;
@@ -289,6 +289,7 @@ if st.button("Evaluate Model"):
     change recommendation results.
     </div>
     """, unsafe_allow_html=True)
+
 
 
 
