@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # ==================================================
-# ADVANCED UI CSS (UNCHANGED + INFO CARD ADDED)
+# ADVANCED UI CSS (UNCHANGED + INFO CARD)
 # ==================================================
 st.markdown("""
 <style>
@@ -123,7 +123,6 @@ st.markdown(f"""
 # 🔍 MOVIE SEARCH
 # ==================================================
 st.header("🔍 Search Movies")
-
 query = st.text_input("Movie title")
 
 if st.button("Search Movie"):
@@ -153,11 +152,57 @@ if query and "search_results" in st.session_state:
                 </div>
                 """, unsafe_allow_html=True)
 
+        col1, col2 = st.columns(2)
+        if col1.button("⬅ Previous", disabled=st.session_state.search_page == 0):
+            st.session_state.search_page -= 1
+            st.rerun()
+        if col2.button("Next ➡", disabled=end >= len(results)):
+            st.session_state.search_page += 1
+            st.rerun()
+
 # ==================================================
-# 🎥 SIMILAR MOVIES
+# 🎭 BROWSE BY GENRE (RESTORED)
+# ==================================================
+st.header("🎭 Browse by Genre")
+genre = st.text_input("Genre (Action, Drama, Sci-Fi)")
+
+if st.button("Search Genre"):
+    st.session_state.genre_page = 0
+    st.session_state.genre_results = search_by_genre(genre)
+
+if genre and "genre_results" in st.session_state:
+    results = st.session_state.genre_results
+
+    if results.empty:
+        st.markdown("<div class='empty-box'>❌ No movies found</div>", unsafe_allow_html=True)
+    else:
+        start = st.session_state.genre_page * RESULTS_PER_PAGE
+        end = start + RESULTS_PER_PAGE
+
+        for _, row in results.iloc[start:end].iterrows():
+            c1, c2 = st.columns([1, 4])
+            with c1:
+                st.image(get_poster_url(row["title"]), width=140)
+            with c2:
+                st.markdown(f"""
+                <div class="card">
+                    <h3>{row['title']}</h3>
+                    <span class="badge">⭐ {row['rating']}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+        if col1.button("⬅ Previous Genre", disabled=st.session_state.genre_page == 0):
+            st.session_state.genre_page -= 1
+            st.rerun()
+        if col2.button("Next Genre ➡", disabled=end >= len(results)):
+            st.session_state.genre_page += 1
+            st.rerun()
+
+# ==================================================
+# 🎥 SIMILAR MOVIES (WITH PAGINATION)
 # ==================================================
 st.header("🎥 Similar Movies")
-
 base_movie = st.text_input("Base movie")
 
 if st.button("Find Similar Movies"):
@@ -185,6 +230,14 @@ if base_movie and "similar_results" in st.session_state:
                 </div>
                 """, unsafe_allow_html=True)
 
+        col1, col2 = st.columns(2)
+        if col1.button("⬅ Previous Similar", disabled=st.session_state.similar_page == 0):
+            st.session_state.similar_page -= 1
+            st.rerun()
+        if col2.button("Next Similar ➡", disabled=end >= len(results)):
+            st.session_state.similar_page += 1
+            st.rerun()
+
 # ==================================================
 # 📊 EXPLAINABILITY & EVALUATION
 # ==================================================
@@ -194,8 +247,8 @@ st.markdown("""
 <div class="info-card">
 <strong>Similarity Heatmap:</strong><br>
 The heatmap visualizes how similar recommended movies are to each other using cosine
-similarity on genre and description features. Darker cells indicate stronger similarity,
-helping explain why certain movies appear together in recommendations.
+similarity over genre and description features. Darker cells indicate stronger similarity,
+helping explain recommendation behavior.
 </div>
 """, unsafe_allow_html=True)
 
@@ -213,10 +266,8 @@ if st.button("Show Similarity Heatmap"):
 
 st.markdown("""
 <div class="info-card">
-<strong>K Value:</strong> Number of top recommendations considered during evaluation.
-Lower values focus on the best matches, while higher values evaluate broader coverage.<br><br>
-<strong>Rating Threshold:</strong> Minimum IMDb rating used to determine whether a movie
-is considered relevant during evaluation.
+<strong>K Value:</strong> Number of top recommendations considered during evaluation.<br>
+<strong>Rating Threshold:</strong> Minimum IMDb rating for a movie to be treated as relevant.
 </div>
 """, unsafe_allow_html=True)
 
@@ -230,17 +281,11 @@ if st.button("Evaluate Model"):
 
     st.markdown("""
     <div class="info-card">
-    <strong>Precision@K:</strong> Indicates how many of the top K recommended movies are relevant.
-    Higher precision means more accurate recommendations.<br><br>
-
-    <strong>Recall@K:</strong> Indicates how many relevant movies in the dataset appear in the
-    top K results. Recall is typically lower in recommender systems due to selective
-    recommendations.<br><br>
-
-    <strong>Effect of Sliders:</strong><br>
-    Increasing <strong>K</strong> generally increases recall but may reduce precision.
-    Increasing the <strong>rating threshold</strong> makes evaluation stricter, often
-    reducing recall while slightly improving precision. These sliders affect only the
-    evaluation metrics and do not change recommendation results.
+    <strong>Precision@K:</strong> Fraction of recommended movies in the top K that are relevant.<br><br>
+    <strong>Recall@K:</strong> Fraction of all relevant movies that appear in the top K.<br><br>
+    <strong>Effect of Sliders:</strong> Increasing K improves recall but may reduce precision.
+    Increasing the rating threshold makes evaluation stricter, often reducing recall while
+    slightly improving precision. These sliders affect only evaluation metrics and do not
+    change recommendation results.
     </div>
     """, unsafe_allow_html=True)
